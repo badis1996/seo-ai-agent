@@ -8,3 +8,164 @@ An AI-powered SEO agent that helps Asendia AI grow inbound traffic without hirin
 - **Competitor Audit**: Audits competitor content and identifies SERP gaps
 - **Content Generation**: Generates outlines for SEO-optimized blog posts
 - **Opportunity Tracking**: Flags new content opportunities weekly
+
+## Project Overview
+
+The SEO AI Agent is designed to automate the entire SEO workflow for Asendia AI, which helps companies qualify candidates in under 24 hours. The agent works by:
+
+1. **Clustering Keywords**: The agent groups keywords based on user intent, profile, and semantic similarity.
+2. **Auditing Competitors**: It analyzes competitor content to identify SERP gaps and opportunities.
+3. **Generating Content Outlines**: The agent creates SEO-optimized outlines for blog posts.
+4. **Tracking Opportunities**: It automatically identifies new content opportunities weekly.
+
+All of this is done without the need to hire an SEO strategist or agency, enabling Asendia AI to grow inbound traffic efficiently.
+
+## Installation
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/badis1996/seo-ai-agent.git
+   cd seo-ai-agent
+   ```
+
+2. Create a virtual environment:
+   ```
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+4. Download required NLTK and spaCy data:
+   ```
+   python -m nltk.downloader punkt stopwords
+   python -m spacy download en_core_web_md
+   ```
+
+5. Create a `.env` file with your API keys:
+   ```
+   SEMRUSH_API_KEY=your_semrush_api_key
+   AHREFS_API_KEY=your_ahrefs_api_key
+   OPENAI_API_KEY=your_openai_api_key
+   SERP_API_KEY=your_serp_api_key
+   DOMAIN=asendia.ai
+   COMPETITORS=competitor1.com,competitor2.com,competitor3.com
+   ```
+
+## Usage
+
+### Using Docker
+
+The easiest way to run the SEO agent is using Docker:
+
+```
+docker-compose up -d
+```
+
+This will start the SEO agent and the weekly scheduler in separate containers.
+
+### Using Command Line
+
+You can run the SEO agent directly using the command line:
+
+```
+# Run all modules
+python main.py all --export
+
+# Run specific modules
+python main.py cluster --seed-keywords "ai recruiter,talent acquisition,recruitment automation"
+python main.py audit --competitors "competitor1.com,competitor2.com"
+python main.py content --keywords "ai recruiter,talent acquisition"
+python main.py opportunity --track-keywords "ai recruiter,talent acquisition"
+
+# Run the weekly scheduler
+python schedule_weekly.py
+```
+
+### Example Usage Scenarios
+
+1. **Find and Cluster Keywords**:
+   ```
+   python main.py cluster --seed-keywords "recruitment automation,ai recruiter,talent acquisition" --method kmeans --clusters 5 --export
+   ```
+
+2. **Analyze Competitors**:
+   ```
+   python main.py audit --competitors "hiretual.com,hireez.com,eightfold.ai" --analyze-content --export
+   ```
+
+3. **Generate Content Outlines**:
+   ```
+   python main.py content --keywords "ai recruiter benefits,recruitment automation roi" --intent informational --word-count 2000 --export
+   ```
+
+4. **Track Weekly Opportunities**:
+   ```
+   python main.py opportunity --track-keywords "ai recruiting,talent acquisition automation,recruitment technology" --export
+   ```
+
+## Project Structure
+
+```
+seo-agent/
+├── __init__.py
+├── config.py              # Configuration settings
+├── main.py                # Main entry point
+├── modules/
+│   ├── __init__.py
+│   ├── keyword_clustering.py  # Keyword intent clustering
+│   ├── competitor_audit.py    # Competitor content analysis
+│   ├── content_generator.py   # Blog outline generator
+│   └── opportunity_tracker.py # Weekly opportunity detection
+├── utils/
+│   ├── __init__.py
+│   ├── api_clients.py     # API clients for SEO tools
+│   ├── data_processing.py # Data processing utilities
+│   └── reporting.py       # Reporting utilities
+└── tests/                 # Unit tests
+```
+
+## Output
+
+The SEO agent generates various outputs:
+
+- **Data**: Raw data files in CSV/JSON format
+- **Reports**: HTML reports with analysis and recommendations
+- **Logs**: Detailed logs of the agent's operations
+
+All outputs are stored in the `data`, `reports`, and `logs` directories.
+
+## Customization
+
+You can customize the agent by modifying the `config.py` file:
+
+- **Domain**: Your domain name
+- **Competitors**: List of competitor domains
+- **User Profiles**: Target user profiles for keyword clustering
+- **Industry Verticals**: Industry verticals for content targeting
+
+## Development
+
+### Running Tests
+
+To run the unit tests:
+
+```
+python -m unittest discover tests
+```
+
+### Extending the Agent
+
+You can extend the agent by:
+
+1. Adding new API clients in `utils/api_clients.py`
+2. Creating new data processing methods in `utils/data_processing.py`
+3. Implementing additional reporting formats in `utils/reporting.py`
+4. Enhancing the modules with new capabilities
+
+## License
+
+Copyright (c) 2025 Asendia AI. All rights reserved.
