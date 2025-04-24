@@ -57,11 +57,14 @@ def run_keyword_clustering(args):
         method=args.method
     )
     
-    # Get top keywords by cluster
+    # Get top keywords by cluster - use a default metric if not provided
+    metric = getattr(args, 'metric', 'volume')
+    top_n = getattr(args, 'top_n', 5)
+    
     top_keywords = clusterer.get_top_keywords_by_cluster(
         clustered_df, 
-        metric=args.metric, 
-        top_n=args.top_n
+        metric=metric, 
+        top_n=top_n
     )
     
     # Create report
@@ -264,6 +267,13 @@ def run_all(args):
     """Run all modules in sequence"""
     logger.info("Running all modules...")
     
+    # Make sure the all command has necessary attributes
+    # Set default values if not provided
+    if not hasattr(args, 'metric'):
+        args.metric = 'volume'
+    if not hasattr(args, 'top_n'):
+        args.top_n = 5
+        
     # Run keyword clustering
     clustered_df = run_keyword_clustering(args)
     
@@ -346,6 +356,8 @@ def main():
     all_parser.add_argument("--export", action="store_true", help="Export data to CSV/JSON")
     all_parser.add_argument("--clusters", type=int, help="Number of clusters")
     all_parser.add_argument("--method", choices=["kmeans", "dbscan", "graph"], default="kmeans", help="Clustering method")
+    all_parser.add_argument("--metric", default="volume", help="Metric for ranking keywords")
+    all_parser.add_argument("--top-n", type=int, default=5, help="Number of top keywords per cluster")
     
     args = parser.parse_args()
     
