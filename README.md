@@ -9,6 +9,32 @@ An AI-powered SEO agent that helps Asendia AI grow inbound traffic without hirin
 - **Content Generation**: Generates outlines for SEO-optimized blog posts
 - **Opportunity Tracking**: Flags new content opportunities weekly
 
+## Free Alternatives for SEO Tools
+
+This SEO Agent is specifically designed to use free alternatives instead of expensive API providers:
+
+### Keyword Research
+- Uses Google Keyword Planner (free with Google Ads account)
+- Leverages Google Trends API (completely free)
+- Can use Google Search Console data if available
+- Includes fallback mock implementations for development
+
+### Competitor Analysis
+- Uses direct web scraping within Terms of Service
+- Leverages SimilarWeb free tier 
+- Implements free SERP analysis techniques
+- Includes fallback mock implementations for development
+
+### Content Generation
+- Can use OpenAI's trial credits or cheaper models
+- Includes complete template-based alternative when API is unavailable
+- Generates quality outlines without requiring paid tools
+
+### Opportunity Tracking
+- Uses Google Trends for trending topics (free)
+- Implements free SERP tracking alternatives
+- Includes robust fallback options for all features
+
 ## Project Overview
 
 The SEO AI Agent is designed to automate the entire SEO workflow for Asendia AI, which helps companies qualify candidates in under 24 hours. The agent works by:
@@ -45,12 +71,12 @@ All of this is done without the need to hire an SEO strategist or agency, enabli
    python -m spacy download en_core_web_md
    ```
 
-5. Create a `.env` file with your API keys:
+5. Create a `.env` file with your optional API keys:
    ```
-   SEMRUSH_API_KEY=your_semrush_api_key
-   AHREFS_API_KEY=your_ahrefs_api_key
-   OPENAI_API_KEY=your_openai_api_key
-   SERP_API_KEY=your_serp_api_key
+   # Optional API keys - will use free alternatives if not provided
+   OPENAI_API_KEY=your_openai_api_key_optional
+   
+   # Required settings
    DOMAIN=asendia.ai
    COMPETITORS=competitor1.com,competitor2.com,competitor3.com
    ```
@@ -122,7 +148,7 @@ seo-agent/
 │   └── opportunity_tracker.py # Weekly opportunity detection
 ├── utils/
 │   ├── __init__.py
-│   ├── api_clients.py     # API clients for SEO tools
+│   ├── api_clients.py     # Free alternative API clients
 │   ├── data_processing.py # Data processing utilities
 │   └── reporting.py       # Reporting utilities
 └── tests/                 # Unit tests
