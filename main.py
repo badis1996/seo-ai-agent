@@ -6,18 +6,19 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Initialize empty module imports that will be implemented later
-# from modules.keyword_clustering import KeywordClusterer
-# from modules.competitor_audit import CompetitorAuditor
-# from modules.content_generator import ContentGenerator
-# from modules.opportunity_tracker import OpportunityTracker
-# from utils.reporting import (
-#     create_keyword_report, 
-#     create_opportunity_report, 
-#     create_competitor_report,
-#     print_table,
-#     export_to_csv
-# )
+# Import the actual module implementations
+from modules.keyword_clustering import KeywordClusterer
+from modules.competitor_audit import CompetitorAuditor
+from modules.content_generator import ContentGenerator
+from modules.opportunity_tracker import OpportunityTracker
+from utils.reporting import (
+    create_keyword_report, 
+    create_opportunity_report, 
+    create_competitor_report,
+    print_table,
+    export_to_csv,
+    export_to_json
+)
 import config
 
 # Configure logging
@@ -42,60 +43,253 @@ def run_keyword_clustering(args):
     """Run keyword clustering module"""
     logger.info("Running keyword clustering...")
     
-    # Placeholder for future implementation
-    print("Keyword clustering module will be implemented here.")
+    # Initialize KeywordClusterer
+    clusterer = KeywordClusterer(config.DOMAIN, user_profiles=config.USER_PROFILES)
     
-    return None
+    # Get keywords
+    seed_keywords = args.seed_keywords.split(',') if args.seed_keywords else None
+    keywords_df = clusterer.fetch_keywords(seed_keywords=seed_keywords)
+    
+    # Cluster keywords
+    clustered_df = clusterer.cluster_keywords(
+        keywords_df, 
+        n_clusters=args.clusters, 
+        method=args.method
+    )
+    
+    # Get top keywords by cluster
+    top_keywords = clusterer.get_top_keywords_by_cluster(
+        clustered_df, 
+        metric=args.metric, 
+        top_n=args.top_n
+    )
+    
+    # Create report
+    report_path = create_keyword_report(clustered_df, output_dir=args.output_dir)
+    
+    # Export data
+    if args.export:
+        export_file = os.path.join(args.output_dir, "clustered_keywords.csv")
+        clustered_df.to_csv(export_file, index=False)
+        logger.info(f"Exported clustered keywords to {export_file}")
+        
+    # Print results
+    print("\n--- Keyword Clustering Results ---")
+    print(f"Total keywords: {len(keywords_df)}")
+    print(f"Clusters: {clustered_df['cluster'].nunique()}")
+    print(f"Report saved to: {report_path}")
+    
+    # Print sample of top keywords by cluster
+    print("\nSample of top keywords by cluster:")
+    for cluster_label, keywords in list(top_keywords.items())[:5]:
+        print(f"\nCluster: {cluster_label}")
+        for i, keyword in enumerate(keywords[:3]):
+            print(f"  {i+1}. {keyword}")
+            
+    return clustered_df
 
 def run_competitor_audit(args):
     """Run competitor audit module"""
     logger.info("Running competitor audit...")
     
-    # Placeholder for future implementation
-    print("Competitor audit module will be implemented here.")
+    competitors = args.competitors.split(',') if args.competitors else config.COMPETITORS
+    auditor = CompetitorAuditor(config.DOMAIN, competitors=competitors)
     
-    return None
+    # Analyze content gap
+    gap_analysis = auditor.analyze_content_gap(min_traffic=args.min_traffic)
+    
+    # Analyze SERP features for gap keywords
+    top_gap_keywords = gap_analysis['keyword'].tolist()[:20]
+    serp_analysis = auditor.analyze_serp_features(top_gap_keywords)
+    
+    # Analyze competitor content
+    competitor_content = {}
+    if args.analyze_content:
+        for competitor in competitors[:3]:  # Limit to top 3 competitors
+            top_pages = auditor.get_top_content(competitor)
+            if not top_pages.empty:
+                top_url = top_pages.iloc[0]['url']
+                competitor_content[top_url] = auditor.analyze_competitor_content(top_url)
+    
+    # Combine results
+    results = {
+        'content_gap': gap_analysis,
+        'serp_analysis': serp_analysis,
+        'competitor_content': competitor_content
+    }
+    
+    # Create report
+    report_path = create_competitor_report(
+        results, 
+        domain=config.DOMAIN, 
+        output_dir=args.output_dir
+    )
+    
+    # Export data
+    if args.export:
+        export_file = os.path.join(args.output_dir, "content_gap.csv")
+        gap_analysis.to_csv(export_file, index=False)
+        logger.info(f"Exported content gap analysis to {export_file}")
+        
+    # Print results
+    print("\n--- Competitor Audit Results ---")
+    print(f"Analyzed competitors: {', '.join(competitors)}")
+    print(f"Content gap keywords: {len(gap_analysis)}")
+    print(f"Report saved to: {report_path}")
+    
+    # Print sample of gap keywords
+    print("\nTop content gap keywords:")
+    for i, (_, row) in enumerate(gap_analysis.head(5).iterrows()):
+        print(f"  {i+1}. {row['keyword']} (Volume: {row['volume']}, Difficulty: {row['difficulty']})")
+        
+    return results
 
 def run_content_generator(args):
     """Run content generator module"""
     logger.info("Running content generator...")
     
-    # Placeholder for future implementation
-    print("Content generator module will be implemented here.")
+    generator = ContentGenerator(openai_api_key=os.getenv("OPENAI_API_KEY"))
     
-    return None
+    # Generate outlines
+    outlines = []
+    keywords = args.keywords.split(',') if args.keywords else []
+    
+    for keyword in keywords:
+        # Determine intent
+        intent = args.intent if args.intent else "informational"
+        
+        # Generate outline
+        outline = generator.generate_blog_outline(
+            keyword, 
+            intent,
+            target_word_count=args.word_count
+        )
+        
+        # Analyze SEO
+        seo_analysis = generator.analyze_outline_seo(outline, keyword)
+        
+        # Refine if needed
+        if seo_analysis['seo_score'] < 80:
+            outline = generator.refine_outline(outline, seo_analysis, keyword)
+            
+        outlines.append({
+            'keyword': keyword,
+            'outline': outline,
+            'seo_analysis': seo_analysis
+        })
+        
+    # Export data
+    if args.export:
+        for i, outline_data in enumerate(outlines):
+            keyword = outline_data['keyword']
+            safe_keyword = ''.join(c if c.isalnum() else '_' for c in keyword)
+            
+            export_file = os.path.join(args.output_dir, f"outline_{safe_keyword}.json")
+            
+            with open(export_file, 'w') as f:
+                json.dump(outline_data, f, indent=2)
+                
+            logger.info(f"Exported outline for '{keyword}' to {export_file}")
+            
+    # Print results
+    print("\n--- Content Generation Results ---")
+    print(f"Generated outlines: {len(outlines)}")
+    
+    for outline_data in outlines:
+        keyword = outline_data['keyword']
+        outline = outline_data['outline']
+        seo_analysis = outline_data['seo_analysis']
+        
+        print(f"\nOutline for: {keyword}")
+        print(f"Title: {outline.get('title', '')}")
+        print(f"SEO Score: {seo_analysis['seo_score']}/100")
+        print("Sections:")
+        
+        for i, section in enumerate(outline.get('sections', [])[:5]):
+            print(f"  {i+1}. {section.get('heading', '')} ({section.get('level', '')}, {section.get('word_count', 0)} words)")
+            
+        if len(outline.get('sections', [])) > 5:
+            print(f"  ... and {len(outline.get('sections', [])) - 5} more sections")
+            
+    return outlines
 
 def run_opportunity_tracker(args):
     """Run opportunity tracker module"""
     logger.info("Running opportunity tracker...")
     
-    # Placeholder for future implementation
-    print("Opportunity tracker module will be implemented here.")
+    tracker = OpportunityTracker(config.DOMAIN, storage_dir=args.output_dir)
     
-    return None
+    # Track keywords if specified
+    if args.track_keywords:
+        keywords = args.track_keywords.split(',')
+        rankings = tracker.track_keyword_rankings(keywords, update=True)
+        print(f"Tracked rankings for {len(keywords)} keywords")
+        
+    # Generate weekly report
+    weekly_report = tracker.generate_weekly_report()
+    
+    # Create report
+    report_path = create_opportunity_report(
+        weekly_report['content_opportunities'], 
+        output_dir=args.output_dir
+    )
+    
+    # Export data
+    if args.export:
+        export_file = os.path.join(args.output_dir, "weekly_opportunities.json")
+        with open(export_file, 'w') as f:
+            json.dump(weekly_report, f, indent=2)
+        logger.info(f"Exported weekly opportunities to {export_file}")
+        
+    # Print results
+    print("\n--- Weekly Opportunity Results ---")
+    print(f"Trending topics: {len(weekly_report['trending_topics'])}")
+    print(f"Content opportunities: {len(weekly_report['content_opportunities'])}")
+    print(f"Report saved to: {report_path}")
+    
+    # Print top opportunities
+    print("\nTop content opportunities:")
+    for i, opportunity in enumerate(weekly_report['content_opportunities'][:5]):
+        print(f"  {i+1}. {opportunity['keyword']} (Score: {opportunity['opportunity_score']})")
+        
+    return weekly_report
 
 def run_all(args):
     """Run all modules in sequence"""
     logger.info("Running all modules...")
     
     # Run keyword clustering
-    run_keyword_clustering(args)
+    clustered_df = run_keyword_clustering(args)
+    
+    # Use top keywords from clustering for competitor audit
+    top_keywords = clustered_df.sort_values('volume', ascending=False)['keyword'].head(20).tolist()
+    args.keywords = ','.join(top_keywords[:5])  # Use top 5 for content generation
     
     # Run competitor audit
-    run_competitor_audit(args)
+    competitor_results = run_competitor_audit(args)
     
     # Run content generator
-    run_content_generator(args)
+    content_results = run_content_generator(args)
+    
+    # Use top keywords for opportunity tracking
+    args.track_keywords = ','.join(top_keywords)
     
     # Run opportunity tracker
-    run_opportunity_tracker(args)
+    opportunity_results = run_opportunity_tracker(args)
     
     # Final report
     print("\n--- SEO AI Agent Execution Complete ---")
-    print(f"All modules executed successfully")
-    print(f"Reports will be saved to: {args.output_dir}")
+    print(f"Processed {len(clustered_df)} keywords")
+    print(f"Generated {len(content_results)} content outlines")
+    print(f"Identified {len(opportunity_results['content_opportunities'])} content opportunities")
+    print(f"All reports saved to: {args.output_dir}")
     
-    return None
+    return {
+        "keyword_clusters": clustered_df,
+        "competitor_analysis": competitor_results,
+        "content_outlines": content_results,
+        "opportunities": opportunity_results
+    }
 
 def main():
     """Main entry point"""
@@ -150,7 +344,7 @@ def main():
     args = parser.parse_args()
     
     # Create output directory if it doesn't exist
-    if not os.path.exists(args.output_dir):
+    if hasattr(args, 'output_dir') and not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
         
     # Run appropriate command
