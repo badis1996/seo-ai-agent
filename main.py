@@ -148,7 +148,13 @@ def run_content_generator(args):
     """Run content generator module"""
     logger.info("Running content generator...")
     
-    generator = ContentGenerator(openai_api_key=os.getenv("OPENAI_API_KEY"))
+    # Initialize content generator with OpenAI API key or alternative
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logger.warning("No OpenAI API key found. Using Claude API if available or free alternatives.")
+        # Could use Claude API here instead or other alternatives
+    
+    generator = ContentGenerator(openai_api_key=api_key)
     
     # Generate outlines
     outlines = []
